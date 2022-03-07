@@ -32,9 +32,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Utility class to parse a MimeMessage.
+ *
  * @author Nick Russler
  */
 public class MimeMessageParser {
@@ -86,6 +88,7 @@ public class MimeMessageParser {
 
     /**
      * Get the String Content of a MimePart.
+     *
      * @param p MimePart
      * @return Content as String
      * @throws IOException
@@ -116,6 +119,7 @@ public class MimeMessageParser {
 
     /**
      * Find the main message body, prefering html over plain.
+     *
      * @param p mime object
      * @return the main message body and the corresponding contentType or an empty text/plain
      * @throws Exception
@@ -152,6 +156,7 @@ public class MimeMessageParser {
     /**
      * Get all inline images (images with an Content-Id) as a Hashmap.
      * The key is the Content-Id and all images in all multipart containers are included in the map.
+     *
      * @param p mime object
      * @return Hashmap&lt;Content-Id, &lt;Base64Image, ContentType&gt;&gt;
      * @throws Exception
@@ -162,9 +167,17 @@ public class MimeMessageParser {
         walkMimeStructure(p, 0, new WalkMimeCallback() {
             @Override
             public void walkMimeCallback(Part p, int level) throws Exception {
-                if (p.isMimeType("image/*") && (p.getHeader("Content-Id") != null)) {
-                    String id = p.getHeader("Content-Id")[0];
+                if (p.getHeader("Content-Id") == null) {
+                    return;
+                }
 
+                String id = p.getHeader("Content-Id")[0];
+                boolean isInlineImage = p.isMimeType("image/*");
+                if (!isInlineImage && p.isMimeType("application/octet-stream")) {
+                    isInlineImage = Pattern.matches(".*\\.(png|jpg|gif|jpeg|webp)@.*", id);
+                }
+
+                if (isInlineImage) {
                     BASE64DecoderStream b64ds = (BASE64DecoderStream) p.getContent();
                     String imageBase64 = BaseEncoding.base64().encode(ByteStreams.toByteArray(b64ds));
                     result.put(id, new MimeObjectEntry<String>(imageBase64, new ContentType(p.getContentType())));
