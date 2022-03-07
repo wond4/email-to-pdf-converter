@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 
 /**
  * Converts email (eml, msg) files into pdf files.
+ *
  * @author Nick Russler
  */
 public class MimeMessageConverter {
@@ -93,6 +94,7 @@ public class MimeMessageConverter {
 
     /**
      * Execute a command and redirect its output to the standard output.
+     *
      * @param command list of the command and its parameters
      */
     private static void execCommand(List<String> command) {
@@ -112,6 +114,7 @@ public class MimeMessageConverter {
 
     /**
      * Convert an email (eml, msg) file to PDF.
+     *
      * @throws Exception
      */
     public static void convertToPdf(String emailFilePath, String pdfOutputPath, boolean hideHeaders, boolean extractAttachments, String attachmentsdir, List<String> extParams) throws Exception {
@@ -149,6 +152,20 @@ public class MimeMessageConverter {
                 recipients = recipientsRaw.split(",");
                 for (int i = 0; i < recipients.length; i++) {
                     recipients[i] = MimeUtility.decodeText(recipients[i]);
+                }
+            } catch (Exception e) {
+                // ignore this error
+            }
+        }
+
+        String[] ccRecipients = new String[0];
+        String ccRecipientsRaw = message.getHeader("Cc", null);
+        if (!Strings.isNullOrEmpty(ccRecipientsRaw)) {
+            try {
+                ccRecipientsRaw = MimeUtility.unfold(ccRecipientsRaw);
+                ccRecipients = ccRecipientsRaw.split(",");
+                for (int i = 0; i < ccRecipients.length; i++) {
+                    ccRecipients[i] = MimeUtility.decodeText(ccRecipients[i]);
                 }
             } catch (Exception e) {
                 // ignore this error
@@ -275,6 +292,10 @@ public class MimeMessageConverter {
 
             if (recipients.length > 0) {
                 headers += String.format(HEADER_FIELD_TEMPLATE, "To", HtmlEscapers.htmlEscaper().escape(Joiner.on(", ").join(recipients)));
+            }
+
+            if (ccRecipients.length > 0) {
+                headers += String.format(HEADER_FIELD_TEMPLATE, "Cc", HtmlEscapers.htmlEscaper().escape(Joiner.on(", ").join(ccRecipients)));
             }
 
             if (!Strings.isNullOrEmpty(sentDateStr)) {
